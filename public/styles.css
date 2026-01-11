@@ -536,6 +536,9 @@ nav {
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .suggestion-item:last-child {
@@ -546,10 +549,33 @@ nav {
   background: var(--bg-gray);
 }
 
+.suggestion-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 2px;
+}
+
+.suggestion-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .suggestion-item strong {
   color: var(--primary-color);
   display: block;
   margin-bottom: 3px;
+}
+
+.suggestion-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .slot-info {

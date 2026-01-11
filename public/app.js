@@ -390,8 +390,11 @@ class LegoPartsApp {
 
       suggestionsDiv.innerHTML = data.parts.map(part => `
         <div class="suggestion-item" onclick="app.selectPart('${part.part_num}', '${part.name.replace(/'/g, "\\'")}')">
-          <strong>${part.part_num}</strong>
-          ${part.name}
+          <img class="suggestion-preview" src="/api/parts/${part.part_num}/drawing" alt="${part.name}">
+          <div class="suggestion-info">
+            <strong>${part.part_num}</strong>
+            <span class="suggestion-name">${part.name}</span>
+          </div>
         </div>
       `).join('');
 
