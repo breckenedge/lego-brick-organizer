@@ -49,7 +49,7 @@ mkdir -p data/downloads data/ldraw
 
 For technical line drawings, download the LDraw parts library:
 
-1. Visit https://www.ldraw.org/library/updates/complete.zip
+1. Visit https://library.ldraw.org/library/updates/complete.zip
 2. Download the complete library
 3. Extract to `data/ldraw/`
    - Should contain folders like `parts/`, `p/`, etc.

@@ -93,7 +93,7 @@ For SVG line drawings instead of Rebrickable images:
 
 ### 1. Download LDraw Library
 
-Visit https://www.ldraw.org/library/updates/complete.zip
+Visit https://library.ldraw.org/library/updates/complete.zip
 
 This is the complete LDraw parts library (~50MB).
 
