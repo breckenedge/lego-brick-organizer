@@ -272,6 +272,7 @@ nav {
   background: white;
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
 }
 
 .slot-card:hover {
@@ -281,6 +282,36 @@ nav {
 .slot-card.filled {
   background: #e7f5ff;
   border-color: var(--primary-color);
+}
+
+.delete-slot-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: var(--danger-color);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.slot-card:hover .delete-slot-btn {
+  opacity: 1;
+}
+
+.delete-slot-btn:hover {
+  background: #c82333;
+  transform: scale(1.1);
 }
 
 .slot-number {
