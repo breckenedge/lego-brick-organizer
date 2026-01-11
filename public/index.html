@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LEGO Parts Organizer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>LEGO Parts Organizer</h1>
+      <nav>
+        <button class="nav-btn active" data-view="search">Search Parts</button>
+        <button class="nav-btn" data-view="bins">Manage Bins</button>
+        <button class="nav-btn" data-view="labels">Print Labels</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Search Parts View -->
+      <section id="search-view" class="view active">
+        <div class="search-container">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search by part number or name..."
+            autocomplete="off"
+          >
+          <button id="search-btn">Search</button>
+        </div>
+
+        <div id="search-results">
+          <p class="help-text">Enter a part number or name to search the catalog</p>
+        </div>
+      </section>
+
+      <!-- Manage Bins View -->
+      <section id="bins-view" class="view">
+        <div class="toolbar">
+          <button id="create-bin-btn" class="primary-btn">Create New Bin</button>
+        </div>
+
+        <div id="bins-list">
+          <p class="help-text">Loading bins...</p>
+        </div>
+      </section>
+
+      <!-- Print Labels View -->
+      <section id="labels-view" class="view">
+        <div class="toolbar">
+          <label>
+            Select Bin:
+            <select id="label-bin-select">
+              <option value="">-- Select a bin --</option>
+            </select>
+          </label>
+          <button id="generate-labels-btn" class="primary-btn">Generate Labels</button>
+        </div>
+
+        <div id="labels-preview">
+          <p class="help-text">Select a bin to generate labels</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal for creating bins -->
+  <div id="create-bin-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create New Bin</h2>
+        <button class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label>
+          Bin ID: <span class="required">*</span>
+          <input type="text" id="new-bin-id" placeholder="e.g., A1, BIN-001" required>
+        </label>
+        <label>
+          Description:
+          <input type="text" id="new-bin-description" placeholder="Optional description">
+        </label>
+        <label>
+          Number of Slots:
+          <input type="number" id="new-bin-slots" value="12" min="1" max="100">
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn">Cancel</button>
+        <button class="primary-btn" id="save-bin-btn">Create Bin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for assigning parts to slots -->
+  <div id="assign-part-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Assign Part to Slot</h2>
+        <button class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="slot-info"></p>
+        <label>
+          Part Number: <span class="required">*</span>
+          <input type="text" id="assign-part-num" placeholder="Search for a part...">
+        </label>
+        <div id="part-suggestions"></div>
+        <label>
+          Quantity:
+          <input type="number" id="assign-quantity" value="0" min="0">
+        </label>
+        <label>
+          Notes:
+          <textarea id="assign-notes" rows="3" placeholder="Optional notes"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn">Cancel</button>
+        <button class="primary-btn" id="save-assignment-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

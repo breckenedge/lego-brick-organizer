@@ -1,0 +1,23 @@
+{
+  "name": "lego-brick-organizer",
+  "version": "1.0.0",
+  "description": "Local web-based catalog system for tracking LEGO parts in physical storage bins",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "import-data": "node scripts/import-rebrickable.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["lego", "parts", "organization", "catalog"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^9.2.2",
+    "express": "^4.18.2",
+    "csv-parse": "^5.5.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
