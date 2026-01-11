@@ -156,7 +156,8 @@ lego-brick-organizer/
 │       │       ├── SlotCard.js
 │       │       └── Autocomplete.js
 │       └── utils/
-│           └── debounce.js    # Utility functions
+│           ├── debounce.js    # Debounce utility
+│           └── escapeHtml.js  # HTML escaping for security
 ├── scripts/
 │   └── import-rebrickable.js  # Import Rebrickable data
 ├── server.js                  # Express server and API
@@ -200,6 +201,7 @@ The application is organized into several layers:
 
 6. **Utilities** (`js/utils/`)
    - `debounce.js`: Debounce function for optimizing search input
+   - `escapeHtml.js`: HTML escaping utility for security (fallback)
 
 ### Component Communication
 
@@ -214,7 +216,27 @@ Components communicate through a custom event system:
 - **Reusability**: UI components (cards, autocomplete) can be used across different views
 - **Testability**: Components are isolated and can be unit tested independently
 - **No Build Step**: Uses native ES6 modules, no webpack/babel required
-- **Framework-Free**: Pure vanilla JavaScript, no external UI framework dependencies
+- **Secure by Default**: Uses lit-html for automatic XSS protection
+
+### Security
+
+The frontend uses **lit-html** (~3KB) for templating, which provides automatic XSS (Cross-Site Scripting) protection:
+
+- **Automatic escaping**: All data interpolated in templates is automatically escaped
+- **Safe by default**: HTML/JavaScript in user data cannot execute
+- **No build step required**: Loaded via CDN using import maps
+- **Fallback utility**: `escapeHtml()` utility available for edge cases
+
+Example of safe rendering:
+```javascript
+// Safe: lit-html automatically escapes part.name
+html`<p class="part-name">${part.name}</p>`
+
+// Would be vulnerable with plain template literals:
+// `<p class="part-name">${part.name}</p>` ← Don't do this!
+```
+
+Even if malicious data like `<script>alert('XSS')</script>` is in the database, lit-html renders it as harmless text, not executable code.
 
 ### Testing
 

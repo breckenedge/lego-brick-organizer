@@ -1,4 +1,5 @@
 // Bins View Component
+import { html, render } from 'lit-html';
 import { Component } from '../base/Component.js';
 import { PartsAPI } from '../../api/partsApi.js';
 import { BinCard } from '../ui/BinCard.js';
@@ -74,68 +75,70 @@ export class BinsView extends Component {
 
   async loadBins() {
     this.currentBin = null;
-    this.setHTML('<p class="help-text">Loading bins...</p>');
+    render(html`<p class="help-text">Loading bins...</p>`, this.container);
 
     try {
       const data = await PartsAPI.getAllBins();
 
       if (data.bins.length === 0) {
-        this.setHTML('<p class="help-text">No bins created yet. Click "Create New Bin" to get started.</p>');
+        render(html`<p class="help-text">No bins created yet. Click "Create New Bin" to get started.</p>`, this.container);
         return;
       }
 
       this.displayBins(data.bins);
     } catch (error) {
       console.error('Load bins error:', error);
-      this.setHTML('<p class="help-text">Error loading bins</p>');
+      render(html`<p class="help-text">Error loading bins</p>`, this.container);
     }
   }
 
   displayBins(bins) {
-    const html = `
+    const template = html`
       <div class="bins-grid">
-        ${bins.map(bin => BinCard.render(bin)).join('')}
+        ${bins.map(bin => BinCard.render(bin))}
       </div>
     `;
-    this.setHTML(html);
+    render(template, this.container);
   }
 
   async viewBinDetails(binId) {
     this.currentBin = binId;
-    this.setHTML('<p class="help-text">Loading bin details...</p>');
+    render(html`<p class="help-text">Loading bin details...</p>`, this.container);
 
     try {
       const bin = await PartsAPI.getBinDetails(binId);
       this.displayBinDetails(bin);
     } catch (error) {
       console.error('Load bin details error:', error);
-      this.setHTML('<p class="help-text">Error loading bin details</p>');
+      render(html`<p class="help-text">Error loading bin details</p>`, this.container);
     }
   }
 
   displayBinDetails(bin) {
-    const slotsHTML = bin.slots.length === 0
-      ? '<p class="help-text">No slots in this bin. Add slots by clicking below.</p>'
-      : `<div class="slots-grid">${bin.slots.map(slot => SlotCard.render(slot)).join('')}</div>`;
-
-    const html = `
+    const template = html`
       <div class="bin-details">
         <div class="bin-header">
           <div>
             <h2>Bin ${bin.bin_id}</h2>
-            ${bin.description ? `<p>${bin.description}</p>` : ''}
+            ${bin.description ? html`<p>${bin.description}</p>` : ''}
           </div>
           <button class="back-btn">Back to Bins</button>
         </div>
 
-        ${slotsHTML}
+        ${bin.slots.length === 0 ? html`
+          <p class="help-text">No slots in this bin. Add slots by clicking below.</p>
+        ` : html`
+          <div class="slots-grid">
+            ${bin.slots.map(slot => SlotCard.render(slot))}
+          </div>
+        `}
 
         <div style="margin-top: 20px;">
           <button class="primary-btn" data-action="add-slots">Add Slots</button>
         </div>
       </div>
     `;
-    this.setHTML(html);
+    render(template, this.container);
   }
 
   async addSlotsToCurrentBin() {
