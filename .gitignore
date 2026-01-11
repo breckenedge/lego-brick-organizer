@@ -6,3 +6,4 @@ data/ldraw/
 .DS_Store
 .env
 *.log
+coverage
