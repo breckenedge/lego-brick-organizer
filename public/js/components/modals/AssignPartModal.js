@@ -13,7 +13,7 @@ export class AssignPartModal extends Modal {
 
   setupSaveButton() {
     const saveBtn = document.getElementById('save-assignment-btn');
-    this.addEventListener(saveBtn, 'click', async () => {
+    this.addManagedListener(saveBtn, 'click', async () => {
       await this.saveAssignment();
     });
   }

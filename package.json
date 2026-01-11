@@ -22,6 +22,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@lit-labs/router": "^0.1.4",
     "better-sqlite3": "^9.2.2",
     "csv-parse": "^5.5.3",
     "express": "^4.18.2"

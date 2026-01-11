@@ -1,15 +1,28 @@
 // Autocomplete Component
-import { Component } from '../base/Component.js';
 import { PartsAPI } from '../../api/partsApi.js';
 import { debounce } from '../../utils/debounce.js';
 
-export class Autocomplete extends Component {
+export class Autocomplete {
   constructor(inputId, suggestionsId) {
-    super();
     this.input = document.getElementById(inputId);
     this.suggestionsContainer = document.getElementById(suggestionsId);
     this.onSelectCallback = null;
+    this.listeners = [];
     this.setupListeners();
+  }
+
+  addManagedListener(element, event, handler) {
+    if (element) {
+      element.addEventListener(event, handler);
+      this.listeners.push({ element, event, handler });
+    }
+  }
+
+  removeAllEventListeners() {
+    this.listeners.forEach(({ element, event, handler }) => {
+      element.removeEventListener(event, handler);
+    });
+    this.listeners = [];
   }
 
   setupListeners() {
@@ -19,7 +32,7 @@ export class Autocomplete extends Component {
       await this.search(query);
     }, 300);
 
-    this.addEventListener(this.input, 'keyup', (e) => {
+    this.addManagedListener(this.input, 'keyup', (e) => {
       const query = e.target.value.trim();
       if (query.length >= 2) {
         debouncedSearch(query);
@@ -61,7 +74,7 @@ export class Autocomplete extends Component {
 
     // Set up click handlers for suggestions
     this.suggestionsContainer.querySelectorAll('[data-action="select-part"]').forEach(item => {
-      this.addEventListener(item, 'click', () => {
+      this.addManagedListener(item, 'click', () => {
         const partNum = item.dataset.partNum;
         const partName = item.dataset.partName;
         this.selectPart(partNum, partName);

@@ -1,36 +1,19 @@
 // Base Component Class
-export class Component {
-  constructor(containerId = null) {
-    this.container = containerId ? document.getElementById(containerId) : null;
-    this.state = {};
+import { LitElement } from 'lit';
+
+export class Component extends LitElement {
+  constructor() {
+    super();
     this.listeners = [];
   }
 
-  setState(newState) {
-    this.state = { ...this.state, ...newState };
-    this.render();
+  // Override createRenderRoot to render in light DOM instead of shadow DOM
+  // This allows us to keep existing CSS and selectors working
+  createRenderRoot() {
+    return this;
   }
 
-  render() {
-    throw new Error('Component must implement render() method');
-  }
-
-  mount(container) {
-    if (typeof container === 'string') {
-      this.container = document.getElementById(container);
-    } else {
-      this.container = container;
-    }
-    this.render();
-  }
-
-  setHTML(html) {
-    if (this.container) {
-      this.container.innerHTML = html;
-    }
-  }
-
-  addEventListener(element, event, handler) {
+  addManagedListener(element, event, handler) {
     if (element) {
       element.addEventListener(event, handler);
       this.listeners.push({ element, event, handler });
@@ -44,11 +27,9 @@ export class Component {
     this.listeners = [];
   }
 
-  destroy() {
+  disconnectedCallback() {
+    super.disconnectedCallback();
     this.removeAllEventListeners();
-    if (this.container) {
-      this.container.innerHTML = '';
-    }
   }
 
   emit(eventName, data) {

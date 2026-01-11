@@ -367,7 +367,20 @@ app.get('/api/bins/:binId/labels', (req, res) => {
 // Static routes
 // ============================================================================
 
-app.get('/', (req, res) => {
+// Client-side routing - serve index.html for specific routes only
+// Must check for file extensions to avoid matching static files
+app.get('*', (req, res, next) => {
+  // Skip if it's an API route
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+
+  // Skip if the request has a file extension (CSS, JS, images, etc.)
+  if (path.extname(req.path)) {
+    return next();
+  }
+
+  // Serve index.html for client-side routes (/, /search, /bins, /bins/A1, /labels)
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

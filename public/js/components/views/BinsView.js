@@ -1,5 +1,5 @@
 // Bins View Component
-import { html, render } from 'lit-html';
+import { html } from 'lit';
 import { Component } from '../base/Component.js';
 import { PartsAPI } from '../../api/partsApi.js';
 import { BinCard } from '../ui/BinCard.js';
@@ -7,19 +7,28 @@ import { SlotCard } from '../ui/SlotCard.js';
 
 export class BinsView extends Component {
   constructor() {
-    super('bins-list');
+    super();
     this.currentBin = null;
-    this.createBinBtn = document.getElementById('create-bin-btn');
+    this.bins = [];
+    this.binDetails = null;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
     this.setupListeners();
   }
 
   setupListeners() {
-    this.addEventListener(this.createBinBtn, 'click', () => {
+    if (this._listenersSetup) return;
+    this._listenersSetup = true;
+
+    const createBinBtn = document.getElementById('create-bin-btn');
+    this.addManagedListener(createBinBtn, 'click', () => {
       this.emit('create-bin-requested');
     });
 
     // Delegate clicks for bin cards and slot actions
-    this.addEventListener(this.container, 'click', async (e) => {
+    this.addManagedListener(this, 'click', async (e) => {
       const viewBinBtn = e.target.closest('[data-action="view-bin"]');
       if (viewBinBtn) {
         const binId = viewBinBtn.dataset.binId;
@@ -49,7 +58,7 @@ export class BinsView extends Component {
 
       const backBtn = e.target.closest('.back-btn');
       if (backBtn) {
-        await this.loadBins();
+        window.navigate('/bins');
         return;
       }
 
@@ -68,77 +77,62 @@ export class BinsView extends Component {
     // Listen for part assignments to refresh bin details
     this.on('part-assigned', async (e) => {
       if (this.currentBin) {
-        await this.viewBinDetails(this.currentBin);
+        await this.showBinDetails(this.currentBin);
       }
     });
   }
 
   async loadBins() {
     this.currentBin = null;
-    render(html`<p class="help-text">Loading bins...</p>`, this.container);
+    this.binDetails = null;
+    this.bins = [];
+    this.requestUpdate();
 
     try {
       const data = await PartsAPI.getAllBins();
-
-      if (data.bins.length === 0) {
-        render(html`<p class="help-text">No bins created yet. Click "Create New Bin" to get started.</p>`, this.container);
-        return;
-      }
-
-      this.displayBins(data.bins);
+      this.bins = data.bins;
+      this.requestUpdate();
     } catch (error) {
       console.error('Load bins error:', error);
-      render(html`<p class="help-text">Error loading bins</p>`, this.container);
+      this.bins = null;
+      this.requestUpdate();
     }
-  }
-
-  displayBins(bins) {
-    const template = html`
-      <div class="bins-grid">
-        ${bins.map(bin => BinCard.render(bin))}
-      </div>
-    `;
-    render(template, this.container);
   }
 
   async viewBinDetails(binId) {
+    // Encode bin ID to make it URL-safe (handles spaces, special chars, etc.)
+    const encodedBinId = encodeURIComponent(binId);
+    window.navigate(`/bins/${encodedBinId}`);
+  }
+
+  async showBinDetails(binId) {
+    // binId is already decoded by the router
+    // Basic validation: check it's not empty
+    if (!binId || binId.trim() === '') {
+      console.error('Invalid bin ID');
+      window.navigate('/bins');
+      return;
+    }
+
     this.currentBin = binId;
-    render(html`<p class="help-text">Loading bin details...</p>`, this.container);
+    this.binDetails = null;
+    this.bins = [];
+    this.requestUpdate();
 
     try {
       const bin = await PartsAPI.getBinDetails(binId);
-      this.displayBinDetails(bin);
+      this.binDetails = bin;
+      this.requestUpdate();
     } catch (error) {
       console.error('Load bin details error:', error);
-      render(html`<p class="help-text">Error loading bin details</p>`, this.container);
+      if (error.status === 404) {
+        alert(`Bin ${binId} not found`);
+        window.navigate('/bins');
+      } else {
+        this.binDetails = { error: true };
+        this.requestUpdate();
+      }
     }
-  }
-
-  displayBinDetails(bin) {
-    const template = html`
-      <div class="bin-details">
-        <div class="bin-header">
-          <div>
-            <h2>Bin ${bin.bin_id}</h2>
-            ${bin.description ? html`<p>${bin.description}</p>` : ''}
-          </div>
-          <button class="back-btn">Back to Bins</button>
-        </div>
-
-        ${bin.slots.length === 0 ? html`
-          <p class="help-text">No slots in this bin. Add slots by clicking below.</p>
-        ` : html`
-          <div class="slots-grid">
-            ${bin.slots.map(slot => SlotCard.render(slot))}
-          </div>
-        `}
-
-        <div style="margin-top: 20px;">
-          <button class="primary-btn" data-action="add-slots">Add Slots</button>
-        </div>
-      </div>
-    `;
-    render(template, this.container);
   }
 
   async addSlotsToCurrentBin() {
@@ -161,7 +155,7 @@ export class BinsView extends Component {
         await PartsAPI.createSlot(this.currentBin, maxSlot + i, null, 0);
       }
 
-      await this.viewBinDetails(this.currentBin);
+      await this.showBinDetails(this.currentBin);
     } catch (error) {
       console.error('Add slots error:', error);
       alert('Error adding slots');
@@ -175,7 +169,7 @@ export class BinsView extends Component {
 
     try {
       await PartsAPI.deleteSlot(slotId);
-      await this.viewBinDetails(this.currentBin);
+      await this.showBinDetails(this.currentBin);
     } catch (error) {
       console.error('Remove slot error:', error);
       alert('Error removing slot');
@@ -185,4 +179,54 @@ export class BinsView extends Component {
   show() {
     this.loadBins();
   }
+
+  render() {
+    // If showing bin details
+    if (this.binDetails) {
+      if (this.binDetails.error) {
+        return html`<p class="help-text">Error loading bin details</p>`;
+      }
+      const bin = this.binDetails;
+      return html`
+        <div class="bin-details">
+          <div class="bin-header">
+            <div>
+              <h2>Bin ${bin.bin_id}</h2>
+              ${bin.description ? html`<p>${bin.description}</p>` : ''}
+            </div>
+            <button class="back-btn">Back to Bins</button>
+          </div>
+
+          ${bin.slots.length === 0 ? html`
+            <p class="help-text">No slots in this bin. Add slots by clicking below.</p>
+          ` : html`
+            <div class="slots-grid">
+              ${bin.slots.map(slot => SlotCard.render(slot))}
+            </div>
+          `}
+
+          <div style="margin-top: 20px;">
+            <button class="primary-btn" data-action="add-slots">Add Slots</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // If showing bins list
+    if (this.bins === null) {
+      return html`<p class="help-text">Error loading bins</p>`;
+    }
+
+    if (this.bins.length === 0) {
+      return html`<p class="help-text">No bins created yet. Click "Create New Bin" to get started.</p>`;
+    }
+
+    return html`
+      <div class="bins-grid">
+        ${this.bins.map(bin => BinCard.render(bin))}
+      </div>
+    `;
+  }
 }
+
+customElements.define('bins-view', BinsView);

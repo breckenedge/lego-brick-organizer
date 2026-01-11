@@ -1,11 +1,28 @@
 // Base Modal Component
-import { Component } from './Component.js';
-
-export class Modal extends Component {
+export class Modal {
   constructor(modalId) {
-    super(modalId);
     this.modalElement = document.getElementById(modalId);
+    this.listeners = [];
     this.setupBaseListeners();
+  }
+
+  addManagedListener(element, event, handler) {
+    if (element) {
+      element.addEventListener(event, handler);
+      this.listeners.push({ element, event, handler });
+    }
+  }
+
+  removeAllEventListeners() {
+    this.listeners.forEach(({ element, event, handler }) => {
+      element.removeEventListener(event, handler);
+    });
+    this.listeners = [];
+  }
+
+  emit(eventName, data) {
+    const event = new CustomEvent(eventName, { detail: data });
+    document.dispatchEvent(event);
   }
 
   setupBaseListeners() {
@@ -14,11 +31,11 @@ export class Modal extends Component {
     // Close on close button
     const closeBtns = this.modalElement.querySelectorAll('.close-btn, .cancel-btn');
     closeBtns.forEach(btn => {
-      this.addEventListener(btn, 'click', () => this.close());
+      this.addManagedListener(btn, 'click', () => this.close());
     });
 
     // Close on outside click
-    this.addEventListener(this.modalElement, 'click', (e) => {
+    this.addManagedListener(this.modalElement, 'click', (e) => {
       if (e.target === this.modalElement) {
         this.close();
       }

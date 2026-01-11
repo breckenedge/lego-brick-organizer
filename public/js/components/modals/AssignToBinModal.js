@@ -11,17 +11,17 @@ export class AssignToBinModal extends Modal {
 
   setupEventListeners() {
     const saveBtn = document.getElementById('save-to-bin-btn');
-    this.addEventListener(saveBtn, 'click', async () => {
+    this.addManagedListener(saveBtn, 'click', async () => {
       await this.saveAssignment();
     });
 
     const assignmentOption = document.getElementById('assignment-option');
-    this.addEventListener(assignmentOption, 'change', () => {
+    this.addManagedListener(assignmentOption, 'change', () => {
       this.handleOptionChange();
     });
 
     const existingBinSelect = document.getElementById('assign-existing-bin');
-    this.addEventListener(existingBinSelect, 'change', async () => {
+    this.addManagedListener(existingBinSelect, 'change', async () => {
       const binId = existingBinSelect.value;
       if (binId) {
         await this.loadNextSlotInfo(binId);
@@ -29,7 +29,7 @@ export class AssignToBinModal extends Modal {
     });
 
     const slotBinSelect = document.getElementById('assign-slot-bin');
-    this.addEventListener(slotBinSelect, 'change', async () => {
+    this.addManagedListener(slotBinSelect, 'change', async () => {
       const binId = slotBinSelect.value;
       if (binId) {
         await this.loadSlotsForBin(binId);

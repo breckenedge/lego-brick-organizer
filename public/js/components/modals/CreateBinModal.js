@@ -10,7 +10,7 @@ export class CreateBinModal extends Modal {
 
   setupSaveButton() {
     const saveBtn = document.getElementById('save-bin-btn');
-    this.addEventListener(saveBtn, 'click', async () => {
+    this.addManagedListener(saveBtn, 'click', async () => {
       await this.createBin();
     });
   }
