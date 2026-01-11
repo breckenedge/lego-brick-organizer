@@ -56,7 +56,7 @@ app.get('/api/parts/search', (req, res) => {
       LEFT JOIN part_categories pc ON p.category_id = pc.id
       LEFT JOIN slots s ON p.part_num = s.part_num
       WHERE p.part_num LIKE ? OR p.name LIKE ?
-      ORDER BY p.part_num
+      ORDER BY (s.bin_id IS NOT NULL) DESC, p.part_num
       LIMIT ? OFFSET ?
     `);
 
