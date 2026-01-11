@@ -236,6 +236,7 @@ class LegoPartsApp {
             bin.slots.map(slot => `
               <div class="slot-card ${slot.part_num ? 'filled' : 'empty'}"
                    onclick="app.openAssignPartModal('${bin.bin_id}', ${slot.slot_number}, ${slot.id})">
+                <button class="delete-slot-btn" onclick="app.removeSlot(${slot.id}, '${bin.bin_id}', event)" title="Remove slot">×</button>
                 <div class="slot-number">Slot ${slot.slot_number}</div>
                 <div class="slot-content">
                   ${slot.part_num ? `
@@ -297,6 +298,31 @@ class LegoPartsApp {
     } catch (error) {
       console.error('Add slots error:', error);
       alert('Error adding slots');
+    }
+  }
+
+  async removeSlot(slotId, binId, event) {
+    // Prevent the slot card click event from firing
+    event.stopPropagation();
+
+    if (!confirm('Are you sure you want to remove this slot?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/slots/${slotId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove slot');
+      }
+
+      // Reload bin details
+      this.viewBinDetails(binId);
+    } catch (error) {
+      console.error('Remove slot error:', error);
+      alert('Error removing slot');
     }
   }
 
