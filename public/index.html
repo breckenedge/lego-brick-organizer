@@ -123,6 +123,92 @@
     </div>
   </div>
 
+  <!-- Modal for assigning unassigned parts to bins -->
+  <div id="assign-to-bin-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Assign Part to Bin</h2>
+        <button class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="part-info-display"></p>
+
+        <label>
+          Assignment Option: <span class="required">*</span>
+          <select id="assignment-option">
+            <option value="">-- Select an option --</option>
+            <option value="new-bin">Create new bin with this part</option>
+            <option value="new-slot">Add to existing bin as new slot</option>
+            <option value="existing-slot">Add to existing slot</option>
+          </select>
+        </label>
+
+        <!-- New Bin Option -->
+        <div id="new-bin-section" class="assignment-section" style="display: none;">
+          <label>
+            Bin ID: <span class="required">*</span>
+            <input type="text" id="assign-new-bin-id" placeholder="e.g., A1, BIN-001">
+          </label>
+          <label>
+            Description:
+            <input type="text" id="assign-new-bin-description" placeholder="Optional description">
+          </label>
+          <label>
+            Number of Slots:
+            <input type="number" id="assign-new-bin-slots" value="12" min="1" max="100">
+          </label>
+          <label>
+            Slot Number for This Part:
+            <input type="number" id="assign-new-bin-slot-number" value="1" min="1">
+          </label>
+        </div>
+
+        <!-- New Slot Option -->
+        <div id="new-slot-section" class="assignment-section" style="display: none;">
+          <label>
+            Select Bin: <span class="required">*</span>
+            <select id="assign-existing-bin">
+              <option value="">-- Select a bin --</option>
+            </select>
+          </label>
+          <p class="help-text" id="next-slot-info"></p>
+        </div>
+
+        <!-- Existing Slot Option -->
+        <div id="existing-slot-section" class="assignment-section" style="display: none;">
+          <label>
+            Select Bin: <span class="required">*</span>
+            <select id="assign-slot-bin">
+              <option value="">-- Select a bin --</option>
+            </select>
+          </label>
+          <label>
+            Select Slot: <span class="required">*</span>
+            <select id="assign-slot-number" disabled>
+              <option value="">-- Select a bin first --</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Common fields -->
+        <div id="common-fields" style="display: none;">
+          <label>
+            Quantity:
+            <input type="number" id="assign-to-bin-quantity" value="0" min="0">
+          </label>
+          <label>
+            Notes:
+            <textarea id="assign-to-bin-notes" rows="3" placeholder="Optional notes"></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn">Cancel</button>
+        <button class="primary-btn" id="save-to-bin-btn">Assign</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
