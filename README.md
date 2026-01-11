@@ -134,11 +134,98 @@ lego-brick-organizer/
 ├── public/
 │   ├── index.html             # Main HTML page
 │   ├── styles.css             # Styles
-│   └── app.js                 # Frontend JavaScript
+│   ├── app.js                 # Frontend application entry point
+│   └── js/                    # Frontend JavaScript components
+│       ├── api/
+│       │   └── partsApi.js    # API service layer
+│       ├── components/
+│       │   ├── base/
+│       │   │   ├── Component.js   # Base component class
+│       │   │   └── Modal.js       # Base modal component
+│       │   ├── modals/
+│       │   │   ├── CreateBinModal.js
+│       │   │   ├── AssignPartModal.js
+│       │   │   └── AssignToBinModal.js
+│       │   ├── views/
+│       │   │   ├── SearchView.js
+│       │   │   ├── BinsView.js
+│       │   │   └── LabelsView.js
+│       │   └── ui/
+│       │       ├── PartCard.js
+│       │       ├── BinCard.js
+│       │       ├── SlotCard.js
+│       │       └── Autocomplete.js
+│       └── utils/
+│           └── debounce.js    # Utility functions
 ├── scripts/
 │   └── import-rebrickable.js  # Import Rebrickable data
 ├── server.js                  # Express server and API
+├── __tests__/                 # Test files
+│   └── unit/
+│       └── frontend/          # Frontend component tests
 └── package.json               # Dependencies and scripts
+```
+
+## Frontend Architecture
+
+The frontend uses a **component-based architecture** built with vanilla JavaScript ES6 modules. This modular approach improves code organization, maintainability, and testability.
+
+### Architecture Overview
+
+The application is organized into several layers:
+
+1. **Base Components** (`js/components/base/`)
+   - `Component.js`: Base class providing common functionality (state management, event handling, lifecycle methods)
+   - `Modal.js`: Base class for modal components with open/close functionality
+
+2. **API Service Layer** (`js/api/`)
+   - `partsApi.js`: Centralized API communication handling all HTTP requests to the backend
+   - Provides methods for parts, bins, and slots endpoints
+
+3. **View Components** (`js/components/views/`)
+   - `SearchView.js`: Handles part search functionality with debounced input
+   - `BinsView.js`: Manages bin listing and detailed bin views
+   - `LabelsView.js`: Generates and displays printable labels
+
+4. **Modal Components** (`js/components/modals/`)
+   - `CreateBinModal.js`: New bin creation workflow
+   - `AssignPartModal.js`: Part assignment to specific slots
+   - `AssignToBinModal.js`: Complex part-to-bin assignment with multiple options
+
+5. **UI Components** (`js/components/ui/`)
+   - `PartCard.js`: Renders individual part cards
+   - `BinCard.js`: Renders bin overview cards
+   - `SlotCard.js`: Renders slot cards with part information
+   - `Autocomplete.js`: Reusable autocomplete functionality
+
+6. **Utilities** (`js/utils/`)
+   - `debounce.js`: Debounce function for optimizing search input
+
+### Component Communication
+
+Components communicate through a custom event system:
+- Components emit events using `this.emit(eventName, data)`
+- Other components listen using `this.on(eventName, handler)`
+- The main app coordinates high-level events between views and modals
+
+### Key Design Principles
+
+- **Separation of Concerns**: Each component has a single, well-defined responsibility
+- **Reusability**: UI components (cards, autocomplete) can be used across different views
+- **Testability**: Components are isolated and can be unit tested independently
+- **No Build Step**: Uses native ES6 modules, no webpack/babel required
+- **Framework-Free**: Pure vanilla JavaScript, no external UI framework dependencies
+
+### Testing
+
+The frontend components are thoroughly tested using Jest:
+- Unit tests for base components (`Component.test.js`)
+- API service tests (`partsApi.test.js`)
+- UI component tests (`PartCard.test.js`, `BinCard.test.js`, `SlotCard.test.js`)
+
+Run tests with:
+```bash
+npm test
 ```
 
 ## API Endpoints
