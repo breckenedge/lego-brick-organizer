@@ -129,7 +129,7 @@ The drawings will be generated on-demand when you view parts.
 3. Enter:
    - Bin ID: `A1`
    - Description: `Test bin`
-   - Number of slots: `12`
+   - Number of slots: `1`
 4. Click **"Create Bin"**
 
 ### Assign a Part
