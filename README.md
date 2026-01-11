@@ -163,7 +163,8 @@ lego-brick-organizer/
 ├── server.js                  # Express server and API
 ├── __tests__/                 # Test files
 │   └── unit/
-│       └── frontend/          # Frontend component tests
+│       ├── database/          # Database tests
+│       └── lib/               # Library tests (parser, SVG generator)
 └── package.json               # Dependencies and scripts
 ```
 
@@ -240,15 +241,20 @@ Even if malicious data like `<script>alert('XSS')</script>` is in the database, 
 
 ### Testing
 
-The frontend components are thoroughly tested using Jest:
-- Unit tests for base components (`Component.test.js`)
-- API service tests (`partsApi.test.js`)
-- UI component tests (`PartCard.test.js`, `BinCard.test.js`, `SlotCard.test.js`)
+The backend has unit tests using Jest:
+- Database schema tests
+- LDraw parser tests
+- SVG generator tests
 
 Run tests with:
 ```bash
 npm test
 ```
+
+**Frontend Testing Note**: The frontend components use ES6 modules with CDN imports (lit-html), which makes traditional Jest testing complex. For comprehensive frontend testing, consider:
+- Browser-based testing frameworks (Playwright, Cypress)
+- Manual testing via the UI
+- The component architecture makes future test integration easier
 
 ## API Endpoints
 
