@@ -1,4 +1,5 @@
 // Labels View Component
+import { html, render } from 'lit-html';
 import { Component } from '../base/Component.js';
 import { PartsAPI } from '../../api/partsApi.js';
 
@@ -45,29 +46,29 @@ export class LabelsView extends Component {
       return;
     }
 
-    this.setHTML('<p class="help-text">Generating labels...</p>');
+    render(html`<p class="help-text">Generating labels...</p>`, this.container);
 
     try {
       const data = await PartsAPI.getBinLabels(binId);
 
       if (data.labels.length === 0) {
-        this.setHTML('<p class="help-text">No parts assigned to this bin</p>');
+        render(html`<p class="help-text">No parts assigned to this bin</p>`, this.container);
         return;
       }
 
       this.displayLabels(data);
     } catch (error) {
       console.error('Generate labels error:', error);
-      this.setHTML('<p class="help-text">Error generating labels</p>');
+      render(html`<p class="help-text">Error generating labels</p>`, this.container);
     }
   }
 
   displayLabels(data) {
-    const html = `
+    const template = html`
       <div class="labels-container">
         <h2>Labels for Bin ${data.bin_id}</h2>
         <div class="label-sheet">
-          ${data.labels.map(label => `
+          ${data.labels.map(label => html`
             <div class="label">
               <div class="label-slot">${label.slot_number}</div>
               <div class="label-info">
@@ -76,12 +77,12 @@ export class LabelsView extends Component {
               </div>
               <div class="label-quantity">Qty: ${label.quantity || 0}</div>
             </div>
-          `).join('')}
+          `)}
         </div>
         <button class="primary-btn print-btn">Print Labels</button>
       </div>
     `;
-    this.setHTML(html);
+    render(template, this.container);
   }
 
   show() {

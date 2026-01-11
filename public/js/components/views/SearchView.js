@@ -1,4 +1,5 @@
 // Search View Component
+import { html, render } from 'lit-html';
 import { Component } from '../base/Component.js';
 import { PartsAPI } from '../../api/partsApi.js';
 import { PartCard } from '../ui/PartCard.js';
@@ -49,24 +50,24 @@ export class SearchView extends Component {
     const query = this.searchInput.value.trim();
 
     if (!query) {
-      this.setHTML('<p class="help-text">Enter a part number or name to search the catalog</p>');
+      render(html`<p class="help-text">Enter a part number or name to search the catalog</p>`, this.container);
       return;
     }
 
-    this.setHTML('<p class="help-text">Searching...</p>');
+    render(html`<p class="help-text">Searching...</p>`, this.container);
 
     try {
       const data = await PartsAPI.searchParts(query, 50);
 
       if (data.parts.length === 0) {
-        this.setHTML('<p class="help-text">No parts found</p>');
+        render(html`<p class="help-text">No parts found</p>`, this.container);
         return;
       }
 
       this.displaySearchResults(data.parts);
     } catch (error) {
       console.error('Search error:', error);
-      this.setHTML('<p class="help-text">Error performing search</p>');
+      render(html`<p class="help-text">Error performing search</p>`, this.container);
     }
   }
 
@@ -74,19 +75,21 @@ export class SearchView extends Component {
     const assignedParts = parts.filter(p => p.bin_id && p.slot_number !== null);
     const unassignedParts = parts.filter(p => !p.bin_id || p.slot_number === null);
 
-    let html = '';
+    const template = html`
+      ${assignedParts.length > 0 ? html`
+        <h3 class="results-section-title">Assigned Parts</h3>
+        ${assignedParts.map(part => PartCard.render(part, false))}
+      ` : ''}
+      ${unassignedParts.length > 0 ? html`
+        <h3 class="results-section-title">Unassigned Parts</h3>
+        ${unassignedParts.map(part => PartCard.render(part, true))}
+      ` : ''}
+      ${assignedParts.length === 0 && unassignedParts.length === 0 ? html`
+        <p class="help-text">No results found.</p>
+      ` : ''}
+    `;
 
-    if (assignedParts.length > 0) {
-      html += '<h3 class="results-section-title">Assigned Parts</h3>';
-      html += assignedParts.map(part => PartCard.render(part, false)).join('');
-    }
-
-    if (unassignedParts.length > 0) {
-      html += '<h3 class="results-section-title">Unassigned Parts</h3>';
-      html += unassignedParts.map(part => PartCard.render(part, true)).join('');
-    }
-
-    this.setHTML(html || '<p class="help-text">No results found.</p>');
+    render(template, this.container);
   }
 
   show() {
