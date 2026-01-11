@@ -297,7 +297,7 @@ class LegoPartsApp {
   }
 
   async addSlotsToCurrentBin() {
-    const count = prompt('How many slots to add?', '12');
+    const count = prompt('How many slots to add?', '1');
     if (!count) return;
 
     const numSlots = parseInt(count);
@@ -369,7 +369,7 @@ class LegoPartsApp {
     // Clear form
     document.getElementById('new-bin-id').value = '';
     document.getElementById('new-bin-description').value = '';
-    document.getElementById('new-bin-slots').value = '12';
+    document.getElementById('new-bin-slots').value = '1';
   }
 
   async createBin() {
@@ -775,7 +775,7 @@ class LegoPartsApp {
   async saveAsNewBin(partNum, quantity, notes) {
     const binId = document.getElementById('assign-new-bin-id').value.trim();
     const description = document.getElementById('assign-new-bin-description').value.trim();
-    const numSlots = parseInt(document.getElementById('assign-new-bin-slots').value) || 12;
+    const numSlots = parseInt(document.getElementById('assign-new-bin-slots').value) || 1;
     const slotNumber = parseInt(document.getElementById('assign-new-bin-slot-number').value) || 1;
 
     if (!binId) {
