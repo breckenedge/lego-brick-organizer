@@ -22,7 +22,7 @@ services:
   svg-service:
     build:
       context: .
-      dockerfile: Dockerfile.svg
+      dockerfile: Dockerfile.svgservice
     container_name: lego-organizer-svg
     expose:
       - "3001"

@@ -172,7 +172,7 @@ lego-brick-organizer/
 │   └── svg-generator.js       # Generate SVG line drawings
 ├── docker-compose.yml         # Docker Compose orchestration
 ├── Dockerfile                 # Docker image for main web app
-├── Dockerfile.svg             # Docker image for SVG service
+├── Dockerfile.svgservice      # Docker image for SVG service
 ├── server.js                  # Main Express web server
 ├── svg-service.js             # Separate SVG generation service
 ├── public/
