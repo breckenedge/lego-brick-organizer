@@ -364,10 +364,11 @@ app.get('/api/bins/:binId/labels', (req, res) => {
 });
 
 // ============================================================================
-// Static routes
+// Static routes - Serve SPA for all non-API routes
 // ============================================================================
 
-app.get('/', (req, res) => {
+// Catch-all route for client-side routing (serves index.html for all non-API routes)
+app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

@@ -49,6 +49,7 @@ export class BinsView extends Component {
 
       const backBtn = e.target.closest('.back-btn');
       if (backBtn) {
+        history.pushState(null, '', '/bins');
         await this.loadBins();
         return;
       }
@@ -103,6 +104,12 @@ export class BinsView extends Component {
 
   async viewBinDetails(binId) {
     this.currentBin = binId;
+
+    // Update URL for deep linking (if not already there)
+    if (window.location.pathname !== `/bins/${binId}`) {
+      history.pushState(null, '', `/bins/${binId}`);
+    }
+
     render(html`<p class="help-text">Loading bin details...</p>`, this.container);
 
     try {
@@ -139,6 +146,10 @@ export class BinsView extends Component {
       </div>
     `;
     render(template, this.container);
+  }
+
+  isShowingDetails() {
+    return this.currentBin !== null;
   }
 
   async addSlotsToCurrentBin() {
