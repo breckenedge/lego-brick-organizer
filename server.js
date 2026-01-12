@@ -1,11 +1,10 @@
 const express = require('express');
 const path = require('path');
 const { initializeDatabase } = require('./database/schema');
-const LDrawParser = require('./lib/ldraw-parser');
-const SVGGenerator = require('./lib/svg-generator');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SVG_SERVICE_URL = process.env.SVG_SERVICE_URL || 'http://localhost:3001';
 
 // Middleware
 app.use(express.json());
@@ -20,10 +19,6 @@ try {
   console.error('Failed to initialize database:', error);
   process.exit(1);
 }
-
-// Initialize LDraw parser
-const ldrawParser = new LDrawParser('./data/ldraw');
-const svgGenerator = new SVGGenerator();
 
 // ============================================================================
 // API ROUTES
@@ -118,44 +113,23 @@ app.get('/api/parts/:partNum', (req, res) => {
   }
 });
 
-// Get or generate SVG drawing for a part
-app.get('/api/parts/:partNum/drawing', (req, res) => {
+// Proxy SVG drawing requests to the SVG service
+app.get('/api/parts/:partNum/drawing', async (req, res) => {
   try {
     const { partNum } = req.params;
+    const svgUrl = `${SVG_SERVICE_URL}/api/parts/${partNum}/drawing`;
 
-    // Check if we have a cached drawing
-    const cached = db.prepare(`
-      SELECT svg_data FROM part_drawings WHERE part_num = ?
-    `).get(partNum);
+    const response = await fetch(svgUrl);
 
-    if (cached) {
-      res.setHeader('Content-Type', 'image/svg+xml');
-      return res.send(cached.svg_data);
+    if (!response.ok) {
+      throw new Error(`SVG service responded with status ${response.status}`);
     }
 
-    // Generate new drawing from LDraw file
-    try {
-      const parsed = ldrawParser.parsePartRecursive(`${partNum}.dat`);
-      const svg = svgGenerator.generateSVG(parsed.edges);
-
-      // Cache the SVG
-      db.prepare(`
-        INSERT OR REPLACE INTO part_drawings (part_num, svg_data)
-        VALUES (?, ?)
-      `).run(partNum, svg);
-
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.send(svg);
-    } catch (ldrawError) {
-      console.warn(`LDraw file not found for ${partNum}, using placeholder`);
-
-      // Generate placeholder SVG
-      const svg = svgGenerator.generateEmptySVG();
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.send(svg);
-    }
+    const svgData = await response.text();
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.send(svgData);
   } catch (error) {
-    console.error('Drawing generation error:', error);
+    console.error('Failed to fetch drawing from SVG service:', error);
     res.status(500).json({ error: 'Failed to generate drawing' });
   }
 });

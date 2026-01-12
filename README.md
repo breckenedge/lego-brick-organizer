@@ -13,8 +13,14 @@ A local-first web application for tracking LEGO parts in physical storage bins. 
 
 ## Prerequisites
 
-- Node.js (v16 or higher)
+### Required
+
+- Node.js (v20 or higher)
 - npm (comes with Node.js)
+
+### Optional (but recommended)
+
+- Docker and Docker Compose (for running with microservices architecture)
 
 ## Installation
 
@@ -70,6 +76,37 @@ This will create a SQLite database at `data/lego-parts.db` and import all parts 
 
 ### Starting the Server
 
+#### Option 1: Using Docker Compose (Recommended)
+
+The application uses a microservices architecture with separate services for the web app and SVG generation. This prevents image generation from blocking the web server.
+
+```bash
+docker compose up
+```
+
+This will start both services:
+- **Web App**: http://localhost:3000
+- **SVG Service**: http://localhost:3001 (internal only)
+
+To run in detached mode:
+```bash
+docker compose up -d
+```
+
+To stop the services:
+```bash
+docker compose down
+```
+
+To rebuild after code changes:
+```bash
+docker compose up --build
+```
+
+#### Option 2: Running Locally with Node.js
+
+For development without Docker:
+
 ```bash
 npm start
 ```
@@ -81,6 +118,8 @@ npm run dev
 ```
 
 The application will be available at: http://localhost:3000
+
+**Note**: When running locally without Docker, SVG generation runs in the same process and may block the web server during heavy image generation.
 
 ### Using the Application
 
@@ -131,6 +170,11 @@ lego-brick-organizer/
 ├── lib/
 │   ├── ldraw-parser.js        # Parse LDraw .dat files
 │   └── svg-generator.js       # Generate SVG line drawings
+├── docker-compose.yml         # Docker Compose orchestration
+├── Dockerfile                 # Docker image for main web app
+├── Dockerfile.svgservice      # Docker image for SVG service
+├── server.js                  # Main Express web server
+├── svg-service.js             # Separate SVG generation service
 ├── public/
 │   ├── index.html             # Main HTML page
 │   ├── styles.css             # Styles
@@ -160,7 +204,6 @@ lego-brick-organizer/
 │           └── escapeHtml.js  # HTML escaping for security
 ├── scripts/
 │   └── import-rebrickable.js  # Import Rebrickable data
-├── server.js                  # Express server and API
 ├── __tests__/                 # Test files
 │   └── unit/
 │       ├── database/          # Database tests
@@ -279,6 +322,30 @@ npm test
 - `DELETE /api/slots/:id` - Remove assignment
 
 ## Technical Details
+
+### Microservices Architecture
+
+The application uses a microservices architecture to prevent SVG generation from blocking the web server:
+
+**Main Web App** (`server.js` on port 3000):
+- Serves the frontend SPA
+- Handles all API endpoints for parts, bins, and slots
+- Proxies SVG drawing requests to the SVG service
+- No blocking operations
+
+**SVG Generation Service** (`svg-service.js` on port 3001):
+- Dedicated service for generating SVG drawings
+- Parses LDraw .dat files
+- Caches generated SVGs in the shared database
+- Handles computationally intensive isometric projection
+
+**Communication**:
+- Services communicate over HTTP
+- Shared database via Docker volumes (or local filesystem)
+- Environment variable `SVG_SERVICE_URL` configures the connection
+- Falls back to placeholder SVGs on service errors
+
+This architecture ensures the web interface remains responsive even when generating complex technical drawings from large LDraw files.
 
 ### LDraw File Format
 
