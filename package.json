@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "dev:all": "concurrently \"npm run dev\" \"node svg-service.js\"",
     "import-data": "node scripts/import-rebrickable.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
+    "concurrently": "^8.2.2",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2"
   }
