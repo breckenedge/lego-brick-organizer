@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Claude CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
 # Set working directory
 WORKDIR /workspace
 
