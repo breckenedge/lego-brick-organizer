@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lego-organizer-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - SVG_SERVICE_URL=http://svg-service:3001
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - svg-service
+    networks:
+      - lego-network
+    restart: unless-stopped
+
+  svg-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.svg
+    container_name: lego-organizer-svg
+    expose:
+      - "3001"
+    environment:
+      - PORT=3001
+    volumes:
+      - ./data:/app/data
+    networks:
+      - lego-network
+    restart: unless-stopped
+
+networks:
+  lego-network:
+    driver: bridge
