@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "import-data": "node scripts/import-rebrickable.js",
+    "migrate": "node scripts/migrate-multiple-parts.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

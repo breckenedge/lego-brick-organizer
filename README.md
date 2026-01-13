@@ -8,6 +8,7 @@ A local-first web application for tracking LEGO parts in physical storage bins. 
 - **Part Search**: Search by part number or name from the complete Rebrickable database
 - **Technical Drawings**: Generate SVG line drawings from LDraw .dat files showing part geometry
 - **Bin Management**: Organize parts by bins and numbered slots
+- **Multiple Parts Per Slot**: Store multiple different part types in a single slot for flexible organization
 - **Location Tracking**: Track which parts are in which bins and slots
 - **Label Printing**: Generate printable labels for bin fronts
 
@@ -71,6 +72,27 @@ npm run import-data
 ```
 
 This will create a SQLite database at `data/lego-parts.db` and import all parts and categories.
+
+### Step 4: Database Migration (If Upgrading from Previous Version)
+
+If you're upgrading from a previous version that used a single part per slot, run the migration script to enable multiple parts per slot:
+
+```bash
+npm run migrate
+```
+
+Or directly:
+
+```bash
+node scripts/migrate-multiple-parts.js
+```
+
+This migration:
+- Creates a new `slot_parts` table for many-to-many relationships
+- Migrates existing slot assignments to the new schema
+- Removes part-specific columns from the `slots` table
+
+**Note**: For new installations, this migration is not required as the schema is already configured for multiple parts per slot.
 
 ## Usage
 
@@ -317,9 +339,14 @@ npm test
 
 ### Slots
 
-- `POST /api/slots` - Assign part to slot
-- `PUT /api/slots/:id` - Update slot
-- `DELETE /api/slots/:id` - Remove assignment
+- `POST /api/slots` - Create a slot
+- `DELETE /api/slots/:id` - Remove slot and all its parts
+
+### Slot Parts
+
+- `POST /api/slots/:slotId/parts` - Add a part to a slot (or update if already exists)
+- `PUT /api/slots/:slotId/parts/:partId` - Update part quantity/notes in a slot
+- `DELETE /api/slots/:slotId/parts/:partId` - Remove a part from a slot
 
 ## Technical Details
 
@@ -368,7 +395,8 @@ The parser extracts Type 2 lines and recursively processes sub-files, applying t
 - `parts` - LEGO part catalog from Rebrickable
 - `part_categories` - Part categories
 - `bins` - Physical storage containers
-- `slots` - Locations within bins
+- `slots` - Locations within bins (slot definitions)
+- `slot_parts` - Many-to-many relationship between slots and parts (allows multiple parts per slot)
 - `part_drawings` - Cached SVG drawings
 
 ## Troubleshooting

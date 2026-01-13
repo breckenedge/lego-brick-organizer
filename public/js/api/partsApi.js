@@ -44,24 +44,39 @@ export class PartsAPI {
   }
 
   // Slots endpoints
-  static async createSlot(binId, slotNumber, partNum = null, quantity = 0, notes = '') {
+  static async createSlot(binId, slotNumber) {
     return this.request('/api/slots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bin_id: binId, slot_number: slotNumber, part_num: partNum, quantity, notes })
-    });
-  }
-
-  static async updateSlot(slotId, partNum, quantity, notes) {
-    return this.request(`/api/slots/${slotId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ part_num: partNum, quantity, notes })
+      body: JSON.stringify({ bin_id: binId, slot_number: slotNumber })
     });
   }
 
   static async deleteSlot(slotId) {
     return this.request(`/api/slots/${slotId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Slot parts endpoints (for managing parts within a slot)
+  static async addPartToSlot(slotId, partNum, quantity = 0, notes = '') {
+    return this.request(`/api/slots/${slotId}/parts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ part_num: partNum, quantity, notes })
+    });
+  }
+
+  static async updateSlotPart(slotId, partId, quantity, notes) {
+    return this.request(`/api/slots/${slotId}/parts/${partId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity, notes })
+    });
+  }
+
+  static async removePartFromSlot(slotId, partId) {
+    return this.request(`/api/slots/${slotId}/parts/${partId}`, {
       method: 'DELETE'
     });
   }
