@@ -44,17 +44,23 @@ export class AssignPartModal extends Modal {
     }
 
     try {
-      if (this.currentSlot.slotId) {
-        await PartsAPI.updateSlot(this.currentSlot.slotId, partNum, quantity, notes);
-      } else {
-        await PartsAPI.createSlot(
+      // Always add a part to the slot (creates slot if it doesn't exist)
+      if (!this.currentSlot.slotId) {
+        // Create the slot first
+        const result = await PartsAPI.createSlot(
           this.currentSlot.binId,
-          this.currentSlot.slotNumber,
-          partNum,
-          quantity,
-          notes
+          this.currentSlot.slotNumber
         );
+        this.currentSlot.slotId = result.id;
       }
+
+      // Add the part to the slot
+      await PartsAPI.addPartToSlot(
+        this.currentSlot.slotId,
+        partNum,
+        quantity,
+        notes
+      );
 
       this.close();
       this.emit('part-assigned', { binId: this.currentSlot.binId });

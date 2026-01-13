@@ -28,7 +28,7 @@ export class BinsView extends Component {
       }
 
       const assignPartBtn = e.target.closest('[data-action="assign-part"]');
-      if (assignPartBtn && !e.target.closest('[data-action="delete-slot"]')) {
+      if (assignPartBtn && !e.target.closest('[data-action="delete-slot"]') && !e.target.closest('[data-action="remove-part"]') && !e.target.closest('[data-action="add-another-part"]')) {
         const slotId = assignPartBtn.dataset.slotId;
         const slotNumber = assignPartBtn.dataset.slotNumber;
         this.emit('assign-part-requested', {
@@ -36,6 +36,28 @@ export class BinsView extends Component {
           slotNumber: parseInt(slotNumber),
           slotId: parseInt(slotId)
         });
+        return;
+      }
+
+      const addAnotherPartBtn = e.target.closest('[data-action="add-another-part"]');
+      if (addAnotherPartBtn) {
+        e.stopPropagation();
+        const slotId = addAnotherPartBtn.dataset.slotId;
+        const slotNumber = addAnotherPartBtn.dataset.slotNumber;
+        this.emit('assign-part-requested', {
+          binId: this.currentBin,
+          slotNumber: parseInt(slotNumber),
+          slotId: parseInt(slotId)
+        });
+        return;
+      }
+
+      const removePartBtn = e.target.closest('[data-action="remove-part"]');
+      if (removePartBtn) {
+        e.stopPropagation();
+        const slotId = removePartBtn.dataset.slotId;
+        const partId = removePartBtn.dataset.partId;
+        await this.removePartFromSlot(parseInt(slotId), parseInt(partId));
         return;
       }
 
@@ -169,7 +191,7 @@ export class BinsView extends Component {
         : 0;
 
       for (let i = 1; i <= numSlots; i++) {
-        await PartsAPI.createSlot(this.currentBin, maxSlot + i, null, 0);
+        await PartsAPI.createSlot(this.currentBin, maxSlot + i);
       }
 
       await this.viewBinDetails(this.currentBin);
@@ -179,8 +201,22 @@ export class BinsView extends Component {
     }
   }
 
+  async removePartFromSlot(slotId, partId) {
+    if (!confirm('Are you sure you want to remove this part from the slot?')) {
+      return;
+    }
+
+    try {
+      await PartsAPI.removePartFromSlot(slotId, partId);
+      await this.viewBinDetails(this.currentBin);
+    } catch (error) {
+      console.error('Remove part error:', error);
+      alert('Error removing part');
+    }
+  }
+
   async removeSlot(slotId) {
-    if (!confirm('Are you sure you want to remove this slot?')) {
+    if (!confirm('Are you sure you want to remove this slot and all its parts?')) {
       return;
     }
 

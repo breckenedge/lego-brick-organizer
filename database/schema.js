@@ -44,17 +44,30 @@ function initializeDatabase(dbPath = './data/lego-parts.db') {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bin_id TEXT NOT NULL,
       slot_number INTEGER NOT NULL,
-      part_num TEXT,
-      quantity INTEGER DEFAULT 0,
-      notes TEXT,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (bin_id) REFERENCES bins(bin_id),
-      FOREIGN KEY (part_num) REFERENCES parts(part_num),
       UNIQUE(bin_id, slot_number)
     );
 
     CREATE INDEX IF NOT EXISTS idx_slots_bin ON slots(bin_id);
-    CREATE INDEX IF NOT EXISTS idx_slots_part ON slots(part_num);
+  `);
+
+  // Create slot_parts table (allows multiple parts per slot)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS slot_parts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slot_id INTEGER NOT NULL,
+      part_num TEXT NOT NULL,
+      quantity INTEGER DEFAULT 0,
+      notes TEXT,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE CASCADE,
+      FOREIGN KEY (part_num) REFERENCES parts(part_num),
+      UNIQUE(slot_id, part_num)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_slot_parts_slot ON slot_parts(slot_id);
+    CREATE INDEX IF NOT EXISTS idx_slot_parts_part ON slot_parts(part_num);
   `);
 
   // Create table for cached SVG line drawings

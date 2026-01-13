@@ -46,10 +46,11 @@ app.get('/api/parts/search', (req, res) => {
         p.part_img_url,
         s.bin_id,
         s.slot_number,
-        s.quantity
+        sp.quantity
       FROM parts p
       LEFT JOIN part_categories pc ON p.category_id = pc.id
-      LEFT JOIN slots s ON p.part_num = s.part_num
+      LEFT JOIN slot_parts sp ON p.part_num = sp.part_num
+      LEFT JOIN slots s ON sp.slot_id = s.id
       WHERE p.part_num LIKE ? OR p.name LIKE ?
       ORDER BY (s.bin_id IS NOT NULL) DESC, p.part_num
       LIMIT ? OFFSET ?
@@ -98,10 +99,11 @@ app.get('/api/parts/:partNum', (req, res) => {
 
     // Get all locations for this part
     const locationsStmt = db.prepare(`
-      SELECT bin_id, slot_number, quantity, notes
-      FROM slots
-      WHERE part_num = ?
-      ORDER BY bin_id, slot_number
+      SELECT s.bin_id, s.slot_number, sp.quantity, sp.notes
+      FROM slot_parts sp
+      JOIN slots s ON sp.slot_id = s.id
+      WHERE sp.part_num = ?
+      ORDER BY s.bin_id, s.slot_number
     `);
 
     part.locations = locationsStmt.all(partNum);
@@ -178,18 +180,32 @@ app.get('/api/bins/:binId', (req, res) => {
       SELECT
         s.id,
         s.slot_number,
-        s.part_num,
-        p.name as part_name,
-        s.quantity,
-        s.notes,
         s.updated_at
       FROM slots s
-      LEFT JOIN parts p ON s.part_num = p.part_num
       WHERE s.bin_id = ?
       ORDER BY s.slot_number
     `);
 
     bin.slots = slotsStmt.all(binId);
+
+    // For each slot, get all parts assigned to it
+    const partsStmt = db.prepare(`
+      SELECT
+        sp.id,
+        sp.part_num,
+        p.name as part_name,
+        sp.quantity,
+        sp.notes,
+        sp.added_at
+      FROM slot_parts sp
+      JOIN parts p ON sp.part_num = p.part_num
+      WHERE sp.slot_id = ?
+      ORDER BY sp.added_at
+    `);
+
+    for (const slot of bin.slots) {
+      slot.parts = partsStmt.all(slot.id);
+    }
 
     res.json(bin);
   } catch (error) {
@@ -224,53 +240,106 @@ app.post('/api/bins', (req, res) => {
   }
 });
 
-// Assign part to a slot
+// Create or get a slot
 app.post('/api/slots', (req, res) => {
   try {
-    const { bin_id, slot_number, part_num, quantity, notes } = req.body;
+    const { bin_id, slot_number } = req.body;
 
     if (!bin_id || slot_number === undefined) {
       return res.status(400).json({ error: 'bin_id and slot_number are required' });
     }
 
     const stmt = db.prepare(`
-      INSERT OR REPLACE INTO slots (bin_id, slot_number, part_num, quantity, notes, updated_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT OR IGNORE INTO slots (bin_id, slot_number, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
     `);
 
-    const result = stmt.run(
-      bin_id,
-      slot_number,
-      part_num || null,
-      quantity || 0,
-      notes || null
-    );
+    stmt.run(bin_id, slot_number);
 
-    res.json({ success: true, id: result.lastInsertRowid });
+    // Get the slot id
+    const getStmt = db.prepare(`
+      SELECT id FROM slots WHERE bin_id = ? AND slot_number = ?
+    `);
+
+    const slot = getStmt.get(bin_id, slot_number);
+
+    res.json({ success: true, id: slot.id });
   } catch (error) {
-    console.error('Assign slot error:', error);
-    res.status(500).json({ error: 'Failed to assign slot' });
+    console.error('Create slot error:', error);
+    res.status(500).json({ error: 'Failed to create slot' });
   }
 });
 
-// Update slot
-app.put('/api/slots/:id', (req, res) => {
+// Add a part to a slot
+app.post('/api/slots/:slotId/parts', (req, res) => {
   try {
-    const { id } = req.params;
+    const { slotId } = req.params;
     const { part_num, quantity, notes } = req.body;
 
+    if (!part_num) {
+      return res.status(400).json({ error: 'part_num is required' });
+    }
+
     const stmt = db.prepare(`
-      UPDATE slots
-      SET part_num = ?, quantity = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      INSERT INTO slot_parts (slot_id, part_num, quantity, notes)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(slot_id, part_num) DO UPDATE SET
+        quantity = excluded.quantity,
+        notes = excluded.notes,
+        added_at = CURRENT_TIMESTAMP
     `);
 
-    stmt.run(part_num || null, quantity || 0, notes || null, id);
+    const result = stmt.run(slotId, part_num, quantity || 0, notes || null);
+
+    // Update slot's updated_at timestamp
+    db.prepare('UPDATE slots SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(slotId);
+
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (error) {
+    console.error('Add part to slot error:', error);
+    res.status(500).json({ error: 'Failed to add part to slot' });
+  }
+});
+
+// Update a part in a slot
+app.put('/api/slots/:slotId/parts/:partId', (req, res) => {
+  try {
+    const { slotId, partId } = req.params;
+    const { quantity, notes } = req.body;
+
+    const stmt = db.prepare(`
+      UPDATE slot_parts
+      SET quantity = ?, notes = ?, added_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND slot_id = ?
+    `);
+
+    stmt.run(quantity || 0, notes || null, partId, slotId);
+
+    // Update slot's updated_at timestamp
+    db.prepare('UPDATE slots SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(slotId);
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Update slot error:', error);
-    res.status(500).json({ error: 'Failed to update slot' });
+    console.error('Update part error:', error);
+    res.status(500).json({ error: 'Failed to update part' });
+  }
+});
+
+// Remove a part from a slot
+app.delete('/api/slots/:slotId/parts/:partId', (req, res) => {
+  try {
+    const { slotId, partId } = req.params;
+
+    const stmt = db.prepare('DELETE FROM slot_parts WHERE id = ? AND slot_id = ?');
+    stmt.run(partId, slotId);
+
+    // Update slot's updated_at timestamp
+    db.prepare('UPDATE slots SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(slotId);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Remove part error:', error);
+    res.status(500).json({ error: 'Failed to remove part' });
   }
 });
 
@@ -319,13 +388,14 @@ app.get('/api/bins/:binId/labels', (req, res) => {
     const stmt = db.prepare(`
       SELECT
         s.slot_number,
-        s.part_num,
+        sp.part_num,
         p.name as part_name,
-        s.quantity
+        sp.quantity
       FROM slots s
-      LEFT JOIN parts p ON s.part_num = p.part_num
-      WHERE s.bin_id = ? AND s.part_num IS NOT NULL
-      ORDER BY s.slot_number
+      JOIN slot_parts sp ON s.id = sp.slot_id
+      LEFT JOIN parts p ON sp.part_num = p.part_num
+      WHERE s.bin_id = ?
+      ORDER BY s.slot_number, sp.added_at
     `);
 
     const labels = stmt.all(binId);
