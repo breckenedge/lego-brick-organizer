@@ -1,9 +1,9 @@
 // LEGO Parts Organizer - Main Application (Refactored)
 import { Router } from './js/router/Router.js';
 import { SearchView } from './js/components/views/SearchView.js';
-import { BinsView } from './js/components/views/BinsView.js';
+import { ContainersView } from './js/components/views/ContainersView.js';
 import { LabelsView } from './js/components/views/LabelsView.js';
-import { CreateBinModal } from './js/components/modals/CreateBinModal.js';
+import { CreateContainerModal } from './js/components/modals/CreateContainerModal.js';
 import { AssignPartModal } from './js/components/modals/AssignPartModal.js';
 import { AssignToBinModal } from './js/components/modals/AssignToBinModal.js';
 
@@ -21,13 +21,13 @@ class LegoPartsApp {
     // Initialize views
     this.views = {
       search: new SearchView(),
-      bins: new BinsView(),
+      bins: new ContainersView(),  // Using ContainersView but keeping 'bins' key for URL compatibility
       labels: new LabelsView()
     };
 
     // Initialize modals
     this.modals = {
-      createBin: new CreateBinModal(),
+      createBin: new CreateContainerModal(),  // Using CreateContainerModal but keeping key for compatibility
       assignPart: new AssignPartModal(),
       assignToBin: new AssignToBinModal()
     };
@@ -42,14 +42,12 @@ class LegoPartsApp {
     this.router.addRoute('/search', () => this.switchView('search', false));
     this.router.addRoute('/bins', () => {
       this.switchView('bins', false);
-      // If currently showing bin details, return to list view
-      if (this.views.bins.isShowingDetails()) {
-        this.views.bins.loadBins();
-      }
+      // Load root containers
+      this.views.bins.show();
     });
-    this.router.addRoute('/bins/:binId', (params) => {
+    this.router.addRoute('/bins/:containerId', (params) => {
       this.switchView('bins', false);
-      this.views.bins.viewBinDetails(params.binId);
+      this.views.bins.viewContainerDetails(parseInt(params.containerId));
     });
     this.router.addRoute('/labels', () => this.switchView('labels', false));
   }
@@ -66,15 +64,26 @@ class LegoPartsApp {
   }
 
   setupEventListeners() {
-    // Create bin requests
+    // Create container requests
     document.addEventListener('create-bin-requested', () => {
       this.modals.createBin.open();
     });
 
+    document.addEventListener('create-container-requested', (e) => {
+      const { parentId } = e.detail || {};
+      this.modals.createBin.open({ parentId });
+    });
+
     // Assign part requests
     document.addEventListener('assign-part-requested', (e) => {
-      const { binId, slotNumber, slotId } = e.detail;
-      this.modals.assignPart.openForSlot(binId, slotNumber, slotId);
+      const { containerId, binId, slotNumber, slotId } = e.detail;
+
+      // Support both new (containerId) and legacy (binId) formats
+      if (containerId) {
+        this.modals.assignPart.openForContainer(containerId);
+      } else if (binId) {
+        this.modals.assignPart.openForSlot(binId, slotNumber, slotId);
+      }
     });
 
     // Assign to bin requests

@@ -1,6 +1,17 @@
 const express = require('express');
 const path = require('path');
 const { initializeDatabase } = require('./database/schema');
+const {
+  getContainerPath,
+  getContainerDetails,
+  getContainerParts,
+  getChildContainers,
+  canContainerHoldParts,
+  getPartLocations,
+  validateContainerHierarchy,
+  getContainerTypes,
+  getContainerStats
+} = require('./database/containerHelpers');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,18 +55,25 @@ app.get('/api/parts/search', (req, res) => {
         p.category_id,
         pc.name as category_name,
         p.part_img_url,
-        s.bin_id,
-        s.slot_number,
-        s.quantity
+        cp.container_id,
+        cp.quantity
       FROM parts p
       LEFT JOIN part_categories pc ON p.category_id = pc.id
-      LEFT JOIN slots s ON p.part_num = s.part_num
+      LEFT JOIN container_parts cp ON p.part_num = cp.part_num
       WHERE p.part_num LIKE ? OR p.name LIKE ?
-      ORDER BY (s.bin_id IS NOT NULL) DESC, p.part_num
+      ORDER BY (cp.container_id IS NOT NULL) DESC, p.part_num
       LIMIT ? OFFSET ?
     `);
 
-    const parts = stmt.all(searchPattern, searchPattern, limit, offset);
+    let parts = stmt.all(searchPattern, searchPattern, limit, offset);
+
+    // Add container paths for parts that have locations
+    parts = parts.map(part => {
+      if (part.container_id) {
+        part.container_path = getContainerPath(db, part.container_id);
+      }
+      return part;
+    });
 
     // Get total count
     const countStmt = db.prepare(`
@@ -96,15 +114,8 @@ app.get('/api/parts/:partNum', (req, res) => {
       return res.status(404).json({ error: 'Part not found' });
     }
 
-    // Get all locations for this part
-    const locationsStmt = db.prepare(`
-      SELECT bin_id, slot_number, quantity, notes
-      FROM slots
-      WHERE part_num = ?
-      ORDER BY bin_id, slot_number
-    `);
-
-    part.locations = locationsStmt.all(partNum);
+    // Get all locations for this part using helper function
+    part.locations = getPartLocations(db, partNum);
 
     res.json(part);
   } catch (error) {
@@ -134,158 +145,272 @@ app.get('/api/parts/:partNum/drawing', async (req, res) => {
   }
 });
 
-// List all bins
-app.get('/api/bins', (req, res) => {
-  try {
-    const stmt = db.prepare(`
-      SELECT
-        b.bin_id,
-        b.description,
-        b.created_at,
-        COUNT(s.id) as slot_count,
-        SUM(CASE WHEN s.part_num IS NOT NULL THEN 1 ELSE 0 END) as filled_slots
-      FROM bins b
-      LEFT JOIN slots s ON b.bin_id = s.bin_id
-      GROUP BY b.bin_id
-      ORDER BY b.bin_id
-    `);
+// ============================================================================
+// CONTAINER MANAGEMENT ENDPOINTS
+// ============================================================================
 
-    const bins = stmt.all();
-    res.json({ bins });
+// Get all container types
+app.get('/api/container-types', (req, res) => {
+  try {
+    const types = getContainerTypes(db);
+    res.json({ types });
   } catch (error) {
-    console.error('Get bins error:', error);
-    res.status(500).json({ error: 'Failed to retrieve bins' });
+    console.error('Get container types error:', error);
+    res.status(500).json({ error: 'Failed to retrieve container types' });
   }
 });
 
-// Get bin details with all slots
-app.get('/api/bins/:binId', (req, res) => {
+// List all root containers (no parent) or children of a specific parent
+app.get('/api/containers', (req, res) => {
   try {
-    const { binId } = req.params;
+    const parentId = req.query.parent_id ? parseInt(req.query.parent_id) : null;
+    const containers = getChildContainers(db, parentId);
 
-    const binStmt = db.prepare(`
-      SELECT * FROM bins WHERE bin_id = ?
-    `);
+    // Add stats for each container
+    const containersWithStats = containers.map(container => ({
+      ...container,
+      ...getContainerStats(db, container.id)
+    }));
 
-    const bin = binStmt.get(binId);
-
-    if (!bin) {
-      return res.status(404).json({ error: 'Bin not found' });
-    }
-
-    // Get all slots in this bin
-    const slotsStmt = db.prepare(`
-      SELECT
-        s.id,
-        s.slot_number,
-        s.part_num,
-        p.name as part_name,
-        s.quantity,
-        s.notes,
-        s.updated_at
-      FROM slots s
-      LEFT JOIN parts p ON s.part_num = p.part_num
-      WHERE s.bin_id = ?
-      ORDER BY s.slot_number
-    `);
-
-    bin.slots = slotsStmt.all(binId);
-
-    res.json(bin);
+    res.json({ containers: containersWithStats });
   } catch (error) {
-    console.error('Get bin error:', error);
-    res.status(500).json({ error: 'Failed to retrieve bin' });
+    console.error('Get containers error:', error);
+    res.status(500).json({ error: 'Failed to retrieve containers' });
   }
 });
 
-// Create a new bin
-app.post('/api/bins', (req, res) => {
+// Get container details with children and parts
+app.get('/api/containers/:id', (req, res) => {
   try {
-    const { bin_id, description } = req.body;
+    const id = parseInt(req.params.id);
+    const container = getContainerDetails(db, id);
 
-    if (!bin_id) {
-      return res.status(400).json({ error: 'bin_id is required' });
+    if (!container) {
+      return res.status(404).json({ error: 'Container not found' });
     }
 
-    const stmt = db.prepare(`
-      INSERT INTO bins (bin_id, description)
-      VALUES (?, ?)
-    `);
+    // Get child containers
+    container.children = getChildContainers(db, id);
 
-    stmt.run(bin_id, description || '');
+    // Get parts if this container can hold parts
+    if (container.can_contain_parts) {
+      container.parts = getContainerParts(db, id);
+    } else {
+      container.parts = [];
+    }
 
-    res.json({ success: true, bin_id });
+    // Get stats
+    container.stats = getContainerStats(db, id);
+
+    res.json(container);
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'Bin ID already exists' });
-    }
-    console.error('Create bin error:', error);
-    res.status(500).json({ error: 'Failed to create bin' });
+    console.error('Get container error:', error);
+    res.status(500).json({ error: 'Failed to retrieve container' });
   }
 });
 
-// Assign part to a slot
-app.post('/api/slots', (req, res) => {
+// Create a new container
+app.post('/api/containers', (req, res) => {
   try {
-    const { bin_id, slot_number, part_num, quantity, notes } = req.body;
+    const { container_id, container_type, parent_id, description } = req.body;
 
-    if (!bin_id || slot_number === undefined) {
-      return res.status(400).json({ error: 'bin_id and slot_number are required' });
+    if (!container_id || !container_type) {
+      return res.status(400).json({ error: 'container_id and container_type are required' });
+    }
+
+    // Validate parent hierarchy if parent_id is provided
+    if (parent_id) {
+      const parentContainer = db.prepare(`
+        SELECT id FROM containers WHERE id = ?
+      `).get(parent_id);
+
+      if (!parentContainer) {
+        return res.status(404).json({ error: 'Parent container not found' });
+      }
     }
 
     const stmt = db.prepare(`
-      INSERT OR REPLACE INTO slots (bin_id, slot_number, part_num, quantity, notes, updated_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO containers (container_id, container_type, parent_id, description)
+      VALUES (?, ?, ?, ?)
     `);
 
     const result = stmt.run(
-      bin_id,
-      slot_number,
-      part_num || null,
+      container_id,
+      container_type,
+      parent_id || null,
+      description || ''
+    );
+
+    const newContainer = getContainerDetails(db, result.lastInsertRowid);
+
+    res.json({ success: true, container: newContainer });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'Container ID already exists' });
+    }
+    console.error('Create container error:', error);
+    res.status(500).json({ error: 'Failed to create container' });
+  }
+});
+
+// Update a container
+app.put('/api/containers/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { container_id, description, parent_id } = req.body;
+
+    // Validate hierarchy if parent_id is being changed
+    if (parent_id !== undefined) {
+      const validation = validateContainerHierarchy(db, id, parent_id);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+    }
+
+    const updates = [];
+    const values = [];
+
+    if (container_id !== undefined) {
+      updates.push('container_id = ?');
+      values.push(container_id);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      values.push(description);
+    }
+    if (parent_id !== undefined) {
+      updates.push('parent_id = ?');
+      values.push(parent_id);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id);
+
+    const stmt = db.prepare(`
+      UPDATE containers
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+
+    stmt.run(...values);
+
+    const updatedContainer = getContainerDetails(db, id);
+    res.json({ success: true, container: updatedContainer });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'Container ID already exists' });
+    }
+    console.error('Update container error:', error);
+    res.status(500).json({ error: 'Failed to update container' });
+  }
+});
+
+// Delete a container
+app.delete('/api/containers/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    // Check if container exists
+    const container = db.prepare(`
+      SELECT id FROM containers WHERE id = ?
+    `).get(id);
+
+    if (!container) {
+      return res.status(404).json({ error: 'Container not found' });
+    }
+
+    // Delete will cascade to children and container_parts due to ON DELETE CASCADE
+    const stmt = db.prepare('DELETE FROM containers WHERE id = ?');
+    stmt.run(id);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete container error:', error);
+    res.status(500).json({ error: 'Failed to delete container' });
+  }
+});
+
+// ============================================================================
+// CONTAINER-PART RELATIONSHIP ENDPOINTS
+// ============================================================================
+
+// Assign a part to a container
+app.post('/api/containers/:id/parts', (req, res) => {
+  try {
+    const containerId = parseInt(req.params.id);
+    const { part_num, quantity, notes } = req.body;
+
+    if (!part_num) {
+      return res.status(400).json({ error: 'part_num is required' });
+    }
+
+    // Verify container can hold parts
+    if (!canContainerHoldParts(db, containerId)) {
+      return res.status(400).json({ error: 'This container type cannot hold parts directly' });
+    }
+
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO container_parts (container_id, part_num, quantity, notes, updated_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `);
+
+    const result = stmt.run(
+      containerId,
+      part_num,
       quantity || 0,
       notes || null
     );
 
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (error) {
-    console.error('Assign slot error:', error);
-    res.status(500).json({ error: 'Failed to assign slot' });
+    console.error('Assign part error:', error);
+    res.status(500).json({ error: 'Failed to assign part to container' });
   }
 });
 
-// Update slot
-app.put('/api/slots/:id', (req, res) => {
+// Update part quantity/notes in a container
+app.put('/api/containers/:containerId/parts/:partNum', (req, res) => {
   try {
-    const { id } = req.params;
-    const { part_num, quantity, notes } = req.body;
+    const containerId = parseInt(req.params.containerId);
+    const { partNum } = req.params;
+    const { quantity, notes } = req.body;
 
     const stmt = db.prepare(`
-      UPDATE slots
-      SET part_num = ?, quantity = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      UPDATE container_parts
+      SET quantity = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE container_id = ? AND part_num = ?
     `);
 
-    stmt.run(part_num || null, quantity || 0, notes || null, id);
+    stmt.run(quantity || 0, notes || null, containerId, partNum);
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Update slot error:', error);
-    res.status(500).json({ error: 'Failed to update slot' });
+    console.error('Update part error:', error);
+    res.status(500).json({ error: 'Failed to update part' });
   }
 });
 
-// Delete slot assignment
-app.delete('/api/slots/:id', (req, res) => {
+// Remove a part from a container
+app.delete('/api/containers/:containerId/parts/:partNum', (req, res) => {
   try {
-    const { id } = req.params;
+    const containerId = parseInt(req.params.containerId);
+    const { partNum } = req.params;
 
-    const stmt = db.prepare('DELETE FROM slots WHERE id = ?');
-    stmt.run(id);
+    const stmt = db.prepare(`
+      DELETE FROM container_parts
+      WHERE container_id = ? AND part_num = ?
+    `);
+
+    stmt.run(containerId, partNum);
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Delete slot error:', error);
-    res.status(500).json({ error: 'Failed to delete slot' });
+    console.error('Delete part error:', error);
+    res.status(500).json({ error: 'Failed to remove part from container' });
   }
 });
 
@@ -311,26 +436,31 @@ app.get('/api/categories', (req, res) => {
   }
 });
 
-// Generate printable labels for a bin
-app.get('/api/bins/:binId/labels', (req, res) => {
+// Generate printable labels for a container
+app.get('/api/containers/:id/labels', (req, res) => {
   try {
-    const { binId } = req.params;
+    const id = parseInt(req.params.id);
 
-    const stmt = db.prepare(`
-      SELECT
-        s.slot_number,
-        s.part_num,
-        p.name as part_name,
-        s.quantity
-      FROM slots s
-      LEFT JOIN parts p ON s.part_num = p.part_num
-      WHERE s.bin_id = ? AND s.part_num IS NOT NULL
-      ORDER BY s.slot_number
-    `);
+    const container = getContainerDetails(db, id);
+    if (!container) {
+      return res.status(404).json({ error: 'Container not found' });
+    }
 
-    const labels = stmt.all(binId);
+    const parts = getContainerParts(db, id);
 
-    res.json({ bin_id: binId, labels });
+    const labels = parts.map(part => ({
+      container_path: container.path,
+      container_id: container.container_id,
+      part_num: part.part_num,
+      part_name: part.part_name,
+      quantity: part.quantity
+    }));
+
+    res.json({
+      container_id: container.container_id,
+      container_path: container.path,
+      labels
+    });
   } catch (error) {
     console.error('Generate labels error:', error);
     res.status(500).json({ error: 'Failed to generate labels' });
