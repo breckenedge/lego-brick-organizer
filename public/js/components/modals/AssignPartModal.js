@@ -6,7 +6,7 @@ import { Autocomplete } from '../ui/Autocomplete.js';
 export class AssignPartModal extends Modal {
   constructor() {
     super('assign-part-modal');
-    this.currentSlot = null;
+    this.currentContainer = null;
     this.autocomplete = new Autocomplete('assign-part-num', 'part-suggestions');
     this.setupSaveButton();
   }
@@ -18,12 +18,12 @@ export class AssignPartModal extends Modal {
     });
   }
 
-  openForSlot(binId, slotNumber, slotId) {
-    this.currentSlot = { binId, slotNumber, slotId };
+  openForContainer(containerId) {
+    this.currentContainer = { containerId };
 
     const slotInfo = this.modalElement.querySelector('.slot-info');
     if (slotInfo) {
-      slotInfo.textContent = `Bin ${binId} - Slot ${slotNumber}`;
+      slotInfo.textContent = `Container ID: ${containerId}`;
     }
 
     this.clearForm(['assign-part-num', 'assign-notes']);
@@ -31,6 +31,11 @@ export class AssignPartModal extends Modal {
     this.autocomplete.clear();
 
     this.open();
+  }
+
+  // Legacy method for backwards compatibility
+  openForSlot(binId, slotNumber, slotId) {
+    this.openForContainer(binId);
   }
 
   async saveAssignment() {
@@ -44,23 +49,18 @@ export class AssignPartModal extends Modal {
     }
 
     try {
-      if (this.currentSlot.slotId) {
-        await PartsAPI.updateSlot(this.currentSlot.slotId, partNum, quantity, notes);
-      } else {
-        await PartsAPI.createSlot(
-          this.currentSlot.binId,
-          this.currentSlot.slotNumber,
-          partNum,
-          quantity,
-          notes
-        );
-      }
+      await PartsAPI.assignPartToContainer(
+        this.currentContainer.containerId,
+        partNum,
+        quantity,
+        notes
+      );
 
       this.close();
-      this.emit('part-assigned', { binId: this.currentSlot.binId });
+      this.emit('part-assigned', { containerId: this.currentContainer.containerId });
     } catch (error) {
       console.error('Save assignment error:', error);
-      alert('Error saving assignment. Make sure the part number exists.');
+      alert('Error saving assignment. Make sure the part number exists and the container can hold parts.');
     }
   }
 }

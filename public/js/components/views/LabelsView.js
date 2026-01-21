@@ -27,32 +27,36 @@ export class LabelsView extends Component {
 
   async loadBinsForLabels() {
     try {
-      const data = await PartsAPI.getAllBins();
+      // Get all containers recursively
+      const data = await PartsAPI.getContainers();
 
-      this.binSelect.innerHTML = '<option value="">-- Select a bin --</option>' +
-        data.bins.map(bin => `
-          <option value="${bin.bin_id}">Bin ${bin.bin_id}${bin.description ? ' - ' + bin.description : ''}</option>
+      // Filter to only show containers that can hold parts
+      const containersWithParts = data.containers.filter(c => c.can_contain_parts && c.partCount > 0);
+
+      this.binSelect.innerHTML = '<option value="">-- Select a container --</option>' +
+        containersWithParts.map(container => `
+          <option value="${container.id}">${container.path}${container.description ? ' - ' + container.description : ''}</option>
         `).join('');
     } catch (error) {
-      console.error('Load bins error:', error);
+      console.error('Load containers error:', error);
     }
   }
 
   async generateLabels() {
-    const binId = this.binSelect.value;
+    const containerId = this.binSelect.value;
 
-    if (!binId) {
-      alert('Please select a bin');
+    if (!containerId) {
+      alert('Please select a container');
       return;
     }
 
     render(html`<p class="help-text">Generating labels...</p>`, this.container);
 
     try {
-      const data = await PartsAPI.getBinLabels(binId);
+      const data = await PartsAPI.getContainerLabels(parseInt(containerId));
 
       if (data.labels.length === 0) {
-        render(html`<p class="help-text">No parts assigned to this bin</p>`, this.container);
+        render(html`<p class="help-text">No parts assigned to this container</p>`, this.container);
         return;
       }
 
@@ -66,7 +70,7 @@ export class LabelsView extends Component {
   displayLabels(data) {
     const template = html`
       <div class="labels-container">
-        <h2>Labels for Bin ${data.bin_id}</h2>
+        <h2>Labels for ${data.container_path}</h2>
         <div class="label-controls">
           <label for="label-width">Width (inches):</label>
           <input type="number" id="label-width" value="2" min="1" max="8" step="0.25" />
@@ -76,9 +80,8 @@ export class LabelsView extends Component {
         </div>
         <div class="label-sheet">
           ${data.labels.map(label => html`
-            <div class="label" data-bin-id="${data.bin_id}">
-              <div class="label-bin">Bin: ${data.bin_id}</div>
-              <div class="label-slot">Slot ${label.slot_number}</div>
+            <div class="label" data-container-path="${label.container_path}">
+              <div class="label-bin">${label.container_path}</div>
               <div class="label-info">
                 <div class="part-num">${label.part_num}</div>
                 <div class="part-name">${label.part_name || 'Unknown part'}</div>

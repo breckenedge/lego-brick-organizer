@@ -34,7 +34,15 @@ export class PartCard {
   }
 
   static formatLocation(part) {
-    if (part.bin_id && part.slot_number !== null) {
+    // Support both new container_path and legacy bin_id/slot_number
+    if (part.container_path) {
+      return html`
+        <div class="part-location">
+          <strong>Location:</strong> ${part.container_path}
+          ${part.quantity ? html`<br><strong>Qty:</strong> ${part.quantity}` : ''}
+        </div>
+      `;
+    } else if (part.bin_id && part.slot_number !== null) {
       return html`
         <div class="part-location">
           <strong>Location:</strong> Bin ${part.bin_id}, Slot ${part.slot_number}
@@ -42,6 +50,6 @@ export class PartCard {
         </div>
       `;
     }
-    return html`<div class="part-location empty">Not assigned to a bin</div>`;
+    return html`<div class="part-location empty">Not assigned to a container</div>`;
   }
 }

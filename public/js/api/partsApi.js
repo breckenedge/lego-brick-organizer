@@ -22,46 +22,66 @@ export class PartsAPI {
     return `/api/parts/${partNum}/drawing`;
   }
 
-  // Bins endpoints
-  static async getAllBins() {
-    return this.request('/api/bins');
+  // Container Type endpoints
+  static async getContainerTypes() {
+    return this.request('/api/container-types');
   }
 
-  static async getBinDetails(binId) {
-    return this.request(`/api/bins/${binId}`);
+  // Container endpoints
+  static async getContainers(parentId = null) {
+    const url = parentId ? `/api/containers?parent_id=${parentId}` : '/api/containers';
+    return this.request(url);
   }
 
-  static async createBin(binId, description) {
-    return this.request('/api/bins', {
+  static async getContainerDetails(containerId) {
+    return this.request(`/api/containers/${containerId}`);
+  }
+
+  static async createContainer(containerId, containerType, parentId = null, description = '') {
+    return this.request('/api/containers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bin_id: binId, description })
+      body: JSON.stringify({ container_id: containerId, container_type: containerType, parent_id: parentId, description })
     });
   }
 
-  static async getBinLabels(binId) {
-    return this.request(`/api/bins/${binId}/labels`);
-  }
-
-  // Slots endpoints
-  static async createSlot(binId, slotNumber, partNum = null, quantity = 0, notes = '') {
-    return this.request('/api/slots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bin_id: binId, slot_number: slotNumber, part_num: partNum, quantity, notes })
-    });
-  }
-
-  static async updateSlot(slotId, partNum, quantity, notes) {
-    return this.request(`/api/slots/${slotId}`, {
+  static async updateContainer(id, updates) {
+    return this.request(`/api/containers/${id}`, {
       method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+  }
+
+  static async deleteContainer(id) {
+    return this.request(`/api/containers/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  static async getContainerLabels(containerId) {
+    return this.request(`/api/containers/${containerId}/labels`);
+  }
+
+  // Container-Part relationship endpoints
+  static async assignPartToContainer(containerId, partNum, quantity = 0, notes = '') {
+    return this.request(`/api/containers/${containerId}/parts`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ part_num: partNum, quantity, notes })
     });
   }
 
-  static async deleteSlot(slotId) {
-    return this.request(`/api/slots/${slotId}`, {
+  static async updateContainerPart(containerId, partNum, quantity, notes) {
+    return this.request(`/api/containers/${containerId}/parts/${partNum}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity, notes })
+    });
+  }
+
+  static async removePartFromContainer(containerId, partNum) {
+    return this.request(`/api/containers/${containerId}/parts/${partNum}`, {
       method: 'DELETE'
     });
   }

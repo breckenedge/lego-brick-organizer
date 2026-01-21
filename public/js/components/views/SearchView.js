@@ -72,8 +72,8 @@ export class SearchView extends Component {
   }
 
   displaySearchResults(parts) {
-    const assignedParts = parts.filter(p => p.bin_id && p.slot_number !== null);
-    const unassignedParts = parts.filter(p => !p.bin_id || p.slot_number === null);
+    const assignedParts = parts.filter(p => p.container_id || (p.bin_id && p.slot_number !== null));
+    const unassignedParts = parts.filter(p => !p.container_id && (!p.bin_id || p.slot_number === null));
 
     const template = html`
       ${assignedParts.length > 0 ? html`
