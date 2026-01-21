@@ -358,48 +358,94 @@ nav {
   margin-top: 20px;
 }
 
+.label-controls {
+  background: white;
+  padding: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.label-controls label {
+  margin-left: 10px;
+  font-weight: 500;
+}
+
+.label-controls input[type="number"] {
+  width: 80px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
 .label-sheet {
   background: white;
   padding: 20px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .label {
   border: 1px dashed var(--border-color);
-  padding: 10px;
-  margin-bottom: 10px;
-  display: grid;
-  grid-template-columns: 80px 1fr 100px;
-  gap: 15px;
-  align-items: center;
+  padding: 8px;
+  width: 2in;
+  height: 1in;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   page-break-inside: avoid;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.label-bin {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
 }
 
 .label-slot {
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--primary-color);
-  text-align: center;
+  margin-bottom: 4px;
 }
 
 .label-info {
-  font-size: 12px;
+  font-size: 10px;
+  flex-grow: 1;
 }
 
 .label-info .part-num {
   font-weight: 600;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .label-info .part-name {
   color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .label-quantity {
   text-align: right;
-  font-size: 14px;
+  font-size: 9px;
   color: var(--text-muted);
+  font-weight: 600;
 }
 
 .print-btn {
@@ -539,13 +585,20 @@ nav {
     padding: 0;
   }
 
-  header, .toolbar, .nav-btn, button {
+  header, .toolbar, .nav-btn, button, .label-controls, h2 {
     display: none !important;
+  }
+
+  .label-sheet {
+    border: none;
+    padding: 0;
+    background: transparent;
   }
 
   .label {
     border: 1px solid #000;
     page-break-inside: avoid;
+    margin: 0;
   }
 }
 
