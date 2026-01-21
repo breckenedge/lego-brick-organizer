@@ -67,10 +67,18 @@ export class LabelsView extends Component {
     const template = html`
       <div class="labels-container">
         <h2>Labels for Bin ${data.bin_id}</h2>
+        <div class="label-controls">
+          <label for="label-width">Width (inches):</label>
+          <input type="number" id="label-width" value="2" min="1" max="8" step="0.25" />
+          <label for="label-height">Height (inches):</label>
+          <input type="number" id="label-height" value="1" min="0.5" max="6" step="0.25" />
+          <button class="secondary-btn apply-size-btn">Apply Size</button>
+        </div>
         <div class="label-sheet">
           ${data.labels.map(label => html`
-            <div class="label">
-              <div class="label-slot">${label.slot_number}</div>
+            <div class="label" data-bin-id="${data.bin_id}">
+              <div class="label-bin">Bin: ${data.bin_id}</div>
+              <div class="label-slot">Slot ${label.slot_number}</div>
               <div class="label-info">
                 <div class="part-num">${label.part_num}</div>
                 <div class="part-name">${label.part_name || 'Unknown part'}</div>
@@ -83,6 +91,26 @@ export class LabelsView extends Component {
       </div>
     `;
     render(template, this.container);
+
+    // Add event listener for size adjustment
+    const applyBtn = this.container.querySelector('.apply-size-btn');
+    this.addEventListener(applyBtn, 'click', () => {
+      this.applyLabelSize();
+    });
+
+    // Apply default size
+    this.applyLabelSize();
+  }
+
+  applyLabelSize() {
+    const width = document.getElementById('label-width').value;
+    const height = document.getElementById('label-height').value;
+
+    const labels = this.container.querySelectorAll('.label');
+    labels.forEach(label => {
+      label.style.width = `${width}in`;
+      label.style.height = `${height}in`;
+    });
   }
 
   show() {
